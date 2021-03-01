@@ -1,0 +1,34 @@
+---
+title: "HW 3a: Penguin t-tests and correlation"
+author: "MSCI 599"
+date: "12/30/2020"
+output: html_document
+---
+
+***
+
+```{r setup, include=FALSE}
+# Put any RMarkdown options you'd like to have throughout the document here
+# These are the options I like to use to make figures smaller and print code output right below the command:
+knitr::opts_chunk$set(fig.width=6, fig.asp = 0.618, collapse=TRUE) 
+```
+
+#### Unit 3: Penguins
+
+#### Homework # 3a t-tests and correlations
+
+#### Skill practice: data exploration, basic statistical diagnostics, t-tests, correlations
+
+***
+
+Use the `palmerpenguins` dataset in R to answer the following questions:
+
+Find literature values of Adelie and Chinstrap body mass. You can use the Encyclopedia of Life https://eol.org/ or find values elsewhere in the literature.
+
+1. Are our observations of Adelie body mass significantly different from the literature?
+2. Are our observations of Chinstrap body mass significantly different from the literature?
+3. Are Adelie and Chinstrap body masses significantly different from each other?
+4. What is the correlation between flipper length and body mass with all penguin species combined into a single dataset? 
+5. What is the correlation between flipper length and body mass for each of the 3 species separately? In which species are these 2 biological metrics least correlated? Most correlated?
+
+For these questions, start with a bit of data exploration. Plot the data and provide summary statistics. Then explain what statistical test you are going to use and explicitly list and test the assumptions for that test. Answer each question clearly by providing a written answer that could be included in a report.
