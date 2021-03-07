@@ -25,10 +25,307 @@ Use the `palmerpenguins` dataset in R to answer the following questions:
 
 Find literature values of Adelie and Chinstrap body mass. You can use the Encyclopedia of Life https://eol.org/ or find values elsewhere in the literature.
 
+
+
+(I feel like this got out of hand, so I'm copy/pasting the questions and answers up here in case that makes grading easier.  I'm also leaving them next to the corresponding code so you can see what I was doing.)
+
 1. Are our observations of Adelie body mass significantly different from the literature?
+- The Palmer station observations of Adelie body mass are significantly different from the literature (p-value < 2.2e-16)
+- The Palmer station mean body weight is 3700.7 g, and the accepted value for adult Adelie penguins from Encyclopedia of life is 4700 g.
+- This is based on a Wilcoxon signed rank test with continuity correction
+- This assumes no significant outliers and that the data are not normally distributed (based on Shapiro-Wilk test for normality)
+
 2. Are our observations of Chinstrap body mass significantly different from the literature?
+- The Palmer station observations of Chinstrap penguin body mass are not significantly different from the literature (p-value = 0.2263)
+- The Palmer station mean body weight is 3733.1 g, and the accepted value for adult Chinstrap penguins from Moreno and Sanz (1996) is 3790 g.
+- This is based on a one-sample t-test
+- This assumes that the data are normally distributed (based on Shapiro-Wilk test for normality)
+
+
 3. Are Adelie and Chinstrap body masses significantly different from each other?
+- Adelie and chinstrap penguin body mass are not significantly different from each other (p=0.5879)
+- Welch's t-test was used. This assumes roughly normal distribution, no significant outliers, and independence of observations.
+
 4. What is the correlation between flipper length and body mass with all penguin species combined into a single dataset? 
+- There is a strong positive correlation between flipper length and body mass for all penguins
+- Pearson's r = 0.8712
+
 5. What is the correlation between flipper length and body mass for each of the 3 species separately? In which species are these 2 biological metrics least correlated? Most correlated?
+- The correlation between flipper length and body mass for Adelie penguins is 0.4682. This was the species in which flipper length and body mass were least correlated.
+- The correlation between flipper length and body mass for Chinstrap penguins is 0.6416
+- The correlation between flipper length and body mass for Gentoo penguins is 0.7027. This was the species in which flipper length and body mass were most correlated.
+
+
+
+1. Are our observations of Adelie body mass significantly different from the literature?
+
+```{r}
+library(palmerpenguins)
+library(tidyverse)
+library(rstatix)
+library(GGally)
+
+## per EoL: Mean Adult Adelie body mass = 4700 g (https://eol.org/data/R57-PK132020496)
+Adelie_mass_EoL=4700
+
+Adelie= penguins %>%
+  filter(species=="Adelie")
+
+Adelie_mass_Palmer= mean(Adelie$body_mass_g, na.rm = TRUE)
+## Mean body mass from Palmer = 3700.7 g
+
+summary(Adelie$body_mass_g)
+
+sd(Adelie$body_mass_g, na.rm = TRUE)
+## standard deviation from Palmer = 458.6 g
+
+Adelie %>%
+  identify_outliers(body_mass_g) #no outliers
+
+ggplot(data=Adelie) +
+  geom_histogram(aes(x=body_mass_g))
+
+ggplot(Adelie)+
+  stat_qq(aes(sample=body_mass_g))
+
+shapiro.test(Adelie$body_mass_g)
+# p-value= 0.0324, meaning not normally distributed
+
+wilcox.test(Adelie$body_mass_g, mu= Adelie_mass_EoL, alternative = "two.sided")
+#  p-value < 2.2e-16
+
+
+```
+
+- The Palmer station observations of Adelie body mass are significantly different from the literature (p-value < 2.2e-16)
+- The Palmer station mean body weight is 3700.7 g, and the accepted value for adult Adelie penguins from Encyclopedia of life is 4700 g.
+- This is based on a Wilcoxon signed rank test with continuity correction
+- This assumes no significant outliers and that the data are not normally distributed (based on Shapiro-Wilk test for normality)
+
+2. Are our observations of Chinstrap body mass significantly different from the literature?
+
+```{r}
+## Per Moreno and Sanz (1996) (https://www.jstor.org/stable/30164217?seq=1), mean body mass of chinstrap penguins = 3790 g
+
+Chinstrap_mass_lit= 3790
+
+Chinstrap= penguins %>%
+  filter(species=="Chinstrap")
+
+Chinstrap_mass_Palmer = mean(Chinstrap$body_mass_g, na.rm = TRUE)
+# Mean body mass from Palmer = 3733.1 g
+
+summary(Chinstrap$body_mass_g)
+
+sd(Chinstrap$body_mass_g, na.rm = TRUE)
+# Standard deviation of Chinstrap body mass = 384.3 g
+
+Chinstrap %>%
+  identify_outliers(body_mass_g) # contains 2 outliers: 4800 g male and 2700 g female
+
+ggplot(data=Chinstrap) +
+  geom_histogram(aes(x=body_mass_g))
+
+ggplot(Chinstrap)+
+  stat_qq(aes(sample=body_mass_g))
+
+shapiro.test(Chinstrap$body_mass_g)
+# p-value = 0.5605, meaning data are normally distributed
+
+t.test(Chinstrap$body_mass_g, mu= Chinstrap_mass_lit)
+# p-value = 0.2263, meaning the mean mass from Palmer is not statistically significantly different from the accepted value
+
+
+```
+- The Palmer station observations of Chinstrap penguin body mass are not significantly different from the literature (p-value = 0.2263)
+- The Palmer station mean body weight is 3733.1 g, and the accepted value for adult Chinstrap penguins from Moreno and Sanz (1996) is 3790 g.
+- This is based on a one-sample t-test
+- This assumes that the data are normally distributed (based on Shapiro-Wilk test for normality)
+
+
+3. Are Adelie and Chinstrap body masses significantly different from each other?
+
+```{r}
+Adelie_Chinstrap_mass = penguins %>%
+  filter(species %in% c("Adelie", "Chinstrap"),
+         !is.na(body_mass_g)) %>%
+  select(species, body_mass_g) %>%
+  droplevels()
+
+Adelie_Chinstrap_mass %>%
+  group_by(species) %>%
+  summarize(mean=mean(body_mass_g), sd=sd(body_mass_g))
+
+ggplot(aes(x=body_mass_g), data= Adelie_Chinstrap_mass)+
+  geom_histogram()+
+  facet_wrap(~species)
+
+Adelie_Chinstrap_mass %>% 
+  group_by(species) %>%
+  identify_outliers(body_mass_g)
+
+# There are 2 outliers in Chinstrap: 1 penguin at 4800 g and 1 penguin at 2700 g
+
+ggplot(Adelie_Chinstrap_mass) +
+  stat_qq(aes(sample=body_mass_g))+
+  facet_wrap(~species)
+
+shapiro.test(Adelie_Chinstrap_mass$body_mass_g)
+# p-value = 0.08978 so data are mostly normally distributed
+
+Adelie_Chinstrap_mass %>% levene_test(body_mass_g ~ species)
+# p-value = 0.029, meaning the variances are not equal
+
+t.test(Adelie_Chinstrap_mass$body_mass_g ~ Adelie_Chinstrap_mass$species)
+# p-value = 0.5879, so we fail to reject the null hypothesis that there's no significant difference in mean body mass for Adelie and Chinstrap penguins
+
+Adelie_Chinstrap_mass %>% cohens_d(body_mass_g ~ species)
+# negligible effect size
+
+```
+- Adelie and chinstrap penguin body mass are not significantly different from each other (p=0.5879)
+- Welch's t-test was used. This assumes roughly normal distribution, no significant outliers, and independence of observations.
+
+4. What is the correlation between flipper length and body mass with all penguin species combined into a single dataset? 
+
+```{r}
+ggplot()+
+  geom_point(aes(x=flipper_length_mm, y=body_mass_g), data=penguins)
+
+ggplot(penguins)+
+  stat_qq(aes(sample=flipper_length_mm))
+
+ggplot(penguins) +
+  stat_qq(aes(sample=body_mass_g))
+
+cor(x=penguins$flipper_length_mm, y=penguins$body_mass_g, use = "complete.obs")
+# correlation = 0.8712
+
+cor.test(x=penguins$flipper_length_mm, y=penguins$body_mass_g, use = "complete.obs")
+
+penguins %>%
+  select(flipper_length_mm, body_mass_g) %>%
+  GGally::ggpairs()
+
+Penguin_flipper_mass_lm = lm(flipper_length_mm ~ body_mass_g, data = penguins)
+summary(Penguin_flipper_mass_lm)
+
+ggplot(data=penguins, aes(x=flipper_length_mm, y=body_mass_g)) +
+  geom_point()+
+  geom_smooth(method = "lm")
+
+plot(Penguin_flipper_mass_lm)
+
+```
+
+- There is a strong positive correlation between flipper length and body mass for all penguins
+- Pearson's r = 0.8712
+
+5. What is the correlation between flipper length and body mass for each of the 3 species separately? In which species are these 2 biological metrics least correlated? Most correlated?
+
+```{r}
+
+# Quick and easy species comparison
+penguins %>%
+  select(species, flipper_length_mm, body_mass_g) %>%
+  GGally::ggpairs(aes(color=species))
+
+
+# Overcomplicating things just to see what happens below #
+Gentoo= penguins %>%
+  filter(species=="Gentoo")
+
+## Adelie details
+ggplot()+
+  geom_point(aes(x=flipper_length_mm, y=body_mass_g), data=Adelie)
+
+ggplot(Adelie)+
+  stat_qq(aes(sample=flipper_length_mm))
+
+ggplot(Adelie) +
+  stat_qq(aes(sample=body_mass_g))
+
+cor(x=Adelie$flipper_length_mm, y=Adelie$body_mass_g, use = "complete.obs")
+# correlation for Adelie= 0.4682
+
+cor.test(x=Adelie$flipper_length_mm, y=Adelie$body_mass_g, use = "complete.obs")
+
+Adelie %>%
+  select(flipper_length_mm, body_mass_g) %>%
+  GGally::ggpairs()
+
+Adelie_flipper_mass_lm = lm(flipper_length_mm ~ body_mass_g, data = penguins)
+summary(Adelie_flipper_mass_lm)
+
+ggplot(data=Adelie, aes(x=flipper_length_mm, y=body_mass_g)) +
+  geom_point()+
+  geom_smooth(method = "lm")
+
+plot(Adelie_flipper_mass_lm)
+
+## Chinstrap details
+
+ggplot()+
+  geom_point(aes(x=flipper_length_mm, y=body_mass_g), data=Chinstrap)
+
+ggplot(Chinstrap)+
+  stat_qq(aes(sample=flipper_length_mm))
+
+ggplot(Chinstrap) +
+  stat_qq(aes(sample=body_mass_g))
+
+cor(x=Chinstrap$flipper_length_mm, y=Chinstrap$body_mass_g, use = "complete.obs")
+# correlation for Chinstrap= 0.6416
+
+cor.test(x=Chinstrap$flipper_length_mm, y=Chinstrap$body_mass_g, use = "complete.obs")
+
+Chinstrap %>%
+  select(flipper_length_mm, body_mass_g) %>%
+  GGally::ggpairs()
+
+Chinstrap_flipper_mass_lm = lm(flipper_length_mm ~ body_mass_g, data = penguins)
+summary(Chinstrap_flipper_mass_lm)
+
+ggplot(data=Chinstrap, aes(x=flipper_length_mm, y=body_mass_g)) +
+  geom_point()+
+  geom_smooth(method = "lm")
+
+plot(Chinstrap_flipper_mass_lm)
+
+
+## Gentoo details
+
+ggplot()+
+  geom_point(aes(x=flipper_length_mm, y=body_mass_g), data=Gentoo)
+
+ggplot(Gentoo)+
+  stat_qq(aes(sample=flipper_length_mm))
+
+ggplot(Gentoo) +
+  stat_qq(aes(sample=body_mass_g))
+
+cor(x=Gentoo$flipper_length_mm, y=Gentoo$body_mass_g, use = "complete.obs")
+# correlation for Gentoo= 0.7027
+
+cor.test(x=Gentoo$flipper_length_mm, y=Gentoo$body_mass_g, use = "complete.obs")
+
+Gentoo %>%
+  select(flipper_length_mm, body_mass_g) %>%
+  GGally::ggpairs()
+
+Gentoo_flipper_mass_lm = lm(flipper_length_mm ~ body_mass_g, data = penguins)
+summary(Gentoo_flipper_mass_lm)
+
+ggplot(data=Gentoo, aes(x=flipper_length_mm, y=body_mass_g)) +
+  geom_point()+
+  geom_smooth(method = "lm")
+
+plot(Gentoo_flipper_mass_lm)
+
+```
+
+- The correlation between flipper length and body mass for Adelie penguins is 0.4682. This was the species in which flipper length and body mass were least correlated.
+- The correlation between flipper length and body mass for Chinstrap penguins is 0.6416
+- The correlation between flipper length and body mass for Gentoo penguins is 0.7027. This was the species in which flipper length and body mass were most correlated.
 
 For these questions, start with a bit of data exploration. Plot the data and provide summary statistics. Then explain what statistical test you are going to use and explicitly list and test the assumptions for that test. Answer each question clearly by providing a written answer that could be included in a report.
